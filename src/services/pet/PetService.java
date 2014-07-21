@@ -37,8 +37,6 @@ import resources.datatables.DisplayType;
 import resources.datatables.Options;
 import resources.datatables.Posture;
 import resources.datatables.State;
-import resources.objects.SWGList;
-import resources.objects.SWGSet;
 import resources.objects.building.BuildingObject;
 import resources.objects.creature.CreatureObject;
 import resources.objects.player.PlayerObject;
@@ -210,6 +208,11 @@ public class PetService implements INetworkDispatch {
 		activeAbilities.add("toggleBeastPassive");
 		player.getActivePetAbilities().set(activeAbilities);
 		
+		// 02 01 02 33 C3 BF 03
+		//byte[] customization = new byte[]{(byte)0x03,(byte)0xBF,(byte)0xC3,(byte)0x33,(byte)0x02,(byte)0x01,(byte)0x02};
+		byte[] customization = new byte[]{(byte)0x02,(byte)0x01,(byte)0x02,(byte)0x33,(byte)0xC3,(byte)0xBF,(byte)0x03};
+		pet.setCustomization(customization);
+		
 		pet.setFaction(actor.getFaction());
 		pet.setFactionStatus(actor.getFactionStatus());
 		pet.setOwnerId(actor.getObjectID());
@@ -225,6 +228,7 @@ public class PetService implements INetworkDispatch {
 //		}
 	}
 	
+	@SuppressWarnings("unused")
 	private void callVehicle(CreatureObject actor, SWGObject pcd, PlayerObject player, CreatureObject mount) {		
 		if ((mount.getLevel() - actor.getLevel()) > 5) {
 			actor.sendSystemMessage(OutOfBand.ProsePackage("@pet/pet_menu:cant_call_level"), DisplayType.Broadcast);
@@ -294,6 +298,7 @@ public class PetService implements INetworkDispatch {
 		player.setCallingCompanion(false);
 	}
 	
+	@SuppressWarnings("unused")
 	private void callMount(CreatureObject actor, SWGObject pcd, PlayerObject player, CreatureObject mount) {
 		return; // NOT IMPLEMENTED
 	}
@@ -1004,8 +1009,11 @@ public class PetService implements INetworkDispatch {
 		        		actor.sendSystemMessage(OutOfBand.ProsePackage("@pet/pet_menu:too_hard"), DisplayType.Broadcast);
 		        	}
 		        	
+		        	Thread.currentThread().interrupt();
+		        	
 		        } catch(InterruptedException v) {
 		            System.out.println(v);
+		            Thread.currentThread().interrupt(); // very important
 		        }
 		    }  
 		};

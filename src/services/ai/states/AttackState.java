@@ -78,13 +78,20 @@ public class AttackState extends AIState {
 				if(weapon != null)
 					maxDistance = weapon.getMaxRange() - 1;
 			}
-			if(actor.getFollowObject().getWorldPosition().getDistance(creature.getWorldPosition()) > maxDistance)
-				actor.setNextPosition(actor.getFollowObject().getPosition());
-			else {
-				//recover(actor);
-				actor.faceObject(actor.getFollowObject());
-				actor.scheduleMovement();
-				return StateResult.UNFINISHED;
+			try{
+				if(actor.getFollowObject().getWorldPosition().getDistance(creature.getWorldPosition()) > maxDistance)
+					actor.setNextPosition(actor.getFollowObject().getPosition());
+				else {
+					//recover(actor);
+					actor.faceObject(actor.getFollowObject());
+					actor.scheduleMovement();
+					return StateResult.UNFINISHED;
+			}
+			} catch (Exception e){
+				DevLog.debugout("Charon", "AI Attack State Exception move method", "actor " + actor);
+				DevLog.debugout("Charon", "AI Attack State Exception move method", "actor.getFollowObject() " + actor.getFollowObject());
+				DevLog.debugout("Charon", "AI Attack State Exception move method", "actor.getFollowObject().getWorldPosition() " + actor.getFollowObject().getWorldPosition());
+				DevLog.debugout("Charon", "AI Attack State Exception move method", "creature.getWorldPosition() " + creature.getWorldPosition());
 			}
 
 		}
@@ -120,8 +127,10 @@ public class AttackState extends AIState {
 			return StateResult.DEAD;
 		if(!creature.isInCombat() || creature.getDefendersList().size() == 0 || actor.getFollowObject() == null)
 		{
-			creature.setLookAtTarget(0);
-			creature.setIntendedTarget(0);
+			if (creature.getLookAtTarget() != 0)
+				creature.setLookAtTarget(0);
+			if (creature.getIntendedTarget() != 0)
+				creature.setIntendedTarget(0);
 			actor.setFollowObject(null);
 			actor.setCurrentState(new RetreatState());
 			return StateResult.FINISHED;
@@ -142,8 +151,10 @@ public class AttackState extends AIState {
 			target = actor.getFollowObject();
 			if(target == null)
 			{
-				creature.setLookAtTarget(0);
-				creature.setIntendedTarget(0);
+				if (creature.getLookAtTarget() != 0)
+					creature.setLookAtTarget(0);
+				if (creature.getIntendedTarget() != 0)
+					creature.setIntendedTarget(0);
 				
 			}
 			actor.setFollowObject(null);
@@ -168,9 +179,10 @@ public class AttackState extends AIState {
 		// Pet
 //		if (creature.getOwnerId()>0)
 //			attacks = creature.getSpecialAttacks();
-		
-		creature.setLookAtTarget(target.getObjectId());
-		creature.setIntendedTarget(target.getObjectId());
+		if (creature.getLookAtTarget() != target.getObjectId())
+			creature.setLookAtTarget(target.getObjectId());
+		if (creature.getIntendedTarget() != target.getObjectId())
+			creature.setIntendedTarget(target.getObjectId());
 		
 		if(attacks.size() == 0) {
 			core.commandService.callCommand(creature, actor.getMobileTemplate().getDefaultAttack(), target, "");

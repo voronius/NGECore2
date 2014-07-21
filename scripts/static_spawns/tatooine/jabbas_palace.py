@@ -49,7 +49,7 @@ def addPlanetSpawns(core, planet):
 	stcSvc.spawnObject('object/mobile/shared_boba_fett.iff', 'tatooine', building.getCellByCellNumber(22), float(-1.0), float(3.0), float(33.1), float(0), float(0), float(0), float(0))
 
 	#EV9D9
-	stcSvc.spawnObject('object/mobile/shared_ev_9d9.iff', 'tatooine', building.getCellByCellNumber(14), float(18.8), float(0.2), float(78.7), float(0), float(0), float(1.0), float(0))
+	stcSvc.spawnObject('object/mobile/shared_ev_9d9.iff', 'tatooine', building.getCellByCellNumber(14), float(23.1), float(0.2), float(87.8), float(0), float(0), float(1.0), float(0))
 	
 	#malakili 
 	stcSvc.spawnObject('object/mobile/shared_malakili.iff', 'tatooine', building.getCellByCellNumber(37), float(17.3), float(-11.0), float(43.8), float(0), float(0), float(0), float(0))
@@ -74,7 +74,7 @@ def addPlanetSpawns(core, planet):
 
 	#outside Palace
 	
-	smuggler = stcSvc.spawnObject('object/mobile/shared_dressed_binayre_hoodlum_zabrak_male_01.iff', 'tatooine', long(0), float(-5863), float(90), float(-6198.2), float(0.71), float(0), float(0.70), float(0)) #still need to find correct template
+	smuggler = stcSvc.spawnObject('object/mobile/shared_dressed_tatooine_jabba_henchman.iff', 'tatooine', long(0), float(-5863), float(90), float(-6198.2), float(0.71), float(0), float(0.70), float(0)) #still need to find correct template
 	smuggler.setCustomName('Smuggler Pilot')
 	smuggler.setOptionsBitmask(256)
 	return

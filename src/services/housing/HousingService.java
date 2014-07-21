@@ -116,7 +116,7 @@ public class HousingService implements INetworkDispatch {
 		//PlayerCity city = core.playerCityService.getCityPositionIsIn(new Point3D(positionX, 0, positionZ));
 		// This function is not implemented, so it had to be commented out, because it resulted in an error
 		// Whoever wrote this, should still add the method to playerCityService, then it can be uncommented here.
-		PlayerCity city = null;
+		@SuppressWarnings("unused") PlayerCity city = null;
 		if (!houseTemplate.canBePlacedOn(actor.getPlanet().getName())) {
 			actor.sendSystemMessage("You may not place this structure on this planet.", (byte) 0); // should probably load this from an stf
 			return null;
@@ -127,10 +127,12 @@ public class HousingService implements INetworkDispatch {
 			return null;
 		}
 		
+		/* This will always be null, so has no use...
 		if(city != null && !city.hasZoningRights(actor)) {
 			actor.sendSystemMessage("@player_structure:no_rights", (byte) 0); 
 			return null;
 		}
+		*/
 		
 		// Lot stuff
 		if (!actor.getPlayerObject().deductLots(structureLotCost)) {
@@ -177,10 +179,13 @@ public class HousingService implements INetworkDispatch {
 		building.addPlayerToAdminList(null, actor.getObjectID(), playerFirstName);
 		building.setDeedTemplate(deed.getTemplate());
 		building.setMaintenanceAmount(houseTemplate.getBaseMaintenanceRate());
+		building.setDestructionFee(houseTemplate.getDestructionFee());
 		
+		/* This will always be null, so has no use...
 		if(city != null) {
 			city.addNewStructure(building.getObjectID());
 		}
+		*/
 		
 		/*
 		// Check for city founders joining a new city
@@ -270,6 +275,7 @@ public class HousingService implements INetworkDispatch {
 		
 	}
 	
+	@SuppressWarnings("unchecked")
 	public void saveBuildings() {
 		core.objectService.getObjectList()
 		.values().stream()
@@ -319,19 +325,19 @@ public class HousingService implements INetworkDispatch {
 												    "\n \n @player_structure:confirm_destruction_d3a " +
 												    "\\#32CD32 @player_structure:confirm_destruction_d3b \\#FFFFFF " +
 												    "@player_structure:confirm_destruction_d4 ");
-		if (building.getConditionDamage()<20 && building.getMaintenanceAmount()<3000){
+		if (building.getConditionDamage()<20 && building.getMaintenanceAmount()<building.getDestructionFee()){
 			window.addListBoxMenuItem("@player_structure:redeed_confirmation \\#BB0000 @player_structure:can_redeed_no_suffix \\#FFFFFF ",1 );
 			noRedeed.add(-1);
 		} else {
 			window.addListBoxMenuItem("@player_structure:redeed_confirmation \\#32CD32 @player_structure:can_redeed_yes_suffix \\#FFFFFF ",1 );
 		}
-		if (building.getConditionDamage()<20){
+		if (building.getConditionDamage()>20){
 			window.addListBoxMenuItem("@player_structure:redeed_condition \\#BB0000 " + building.getConditionDamage() + " \\#FFFFFF ",1 );
 			noRedeed.add(-1);
 		} else {
 			window.addListBoxMenuItem("@player_structure:redeed_condition \\#32CD32 " + building.getConditionDamage() + " \\#FFFFFF ",1 );
 		}
-		if (building.getMaintenanceAmount()<0 || building.getMaintenanceAmount()<800){
+		if (building.getMaintenanceAmount()<building.getDestructionFee()){
 			window.addListBoxMenuItem("@player_structure:redeed_maintenance \\#BB0000 " + (int)building.getMaintenanceAmount() + " \\#FFFFFF ",2 );
 			noRedeed.add(-1);
 		} else {
@@ -347,8 +353,13 @@ public class HousingService implements INetworkDispatch {
 			@Override
 			public void process(SWGObject owner, int eventType, Vector<String> returnList) {			
 				core.suiService.closeSUIWindow(owner, 0);
-				if (noRedeed.size()==0 && ((CreatureObject)owner).getBankCredits()>800)
-					createCodeWindow(owner, target);
+				if (noRedeed.size()==0){
+					building.setAttachment("Can_Redeed", 1);					
+				} else {
+					building.setAttachment("Can_Redeed", 0);	
+				}
+				
+				createCodeWindow(owner, target);
 			}					
 		});		
 		window.addHandler(1, "", Trigger.TRIGGER_CANCEL, returnList, new SUICallback() {
@@ -363,17 +374,27 @@ public class HousingService implements INetworkDispatch {
 	public void createCodeWindow(SWGObject owner, TangibleObject target) {
 		
 		final BuildingObject building = (BuildingObject) target.getGrandparent();
+		int canRedeed = (int) building.getAttachment("Can_Redeed");
 		//final BuildingObject building = (BuildingObject) target.getAttachment("housing_parentstruct");
 		//final BuildingObject building = (BuildingObject)target;
 		Random rnd = new Random();
 		final int confirmCode = 100000 + rnd.nextInt(900000);
 		final SUIWindow window = core.suiService.createInputBox(2,"@player_structure:structure_status","@player_structure:structure_name_prompt", owner, target, 0);
 		window.setProperty("bg.caption.lblTitle:Text", "@player_structure:confirm_destruction_t");
-	
-		window.setProperty("Prompt.lblPrompt:Text", "@player_structure:your_structure_prefix " +
+		
+		
+		
+		if (canRedeed==1){
+			window.setProperty("Prompt.lblPrompt:Text", "@player_structure:your_structure_prefix " +
 												"\\#32CD32 @player_structure:will_redeed_confirm \\#FFFFFF "+
 											    "@player_structure:will_redeed_suffix "  +
 											    "\n \n Code: " + confirmCode);
+		} else {
+			window.setProperty("Prompt.lblPrompt:Text", "@player_structure:your_structure_prefix " +
+					"\\#BB0000 @player_structure:will_not_redeed_confirm \\#FFFFFF "+
+				    "@player_structure:will_redeed_suffix "  +
+				    "\n \n Code: " + confirmCode);
+		}
 
 		window.setProperty("btnOk:visible", "True");
 		window.setProperty("btnCancel:visible", "True");
@@ -392,35 +413,53 @@ public class HousingService implements INetworkDispatch {
 					PlayerObject player = (PlayerObject) houseOwner.getSlottedObject("ghost");	
 					HouseTemplate houseTemplate = housingTemplates.get(houseToDeed.get(building.getTemplate()));
 					
-					TangibleObject deed = (TangibleObject) core.objectService.createObject(houseTemplate.getDeedTemplate(), owner.getPlanet());
 					
-					if (player.getLotsRemaining() + houseTemplate.getLotCost() > 10){
-						// Something went wrong or hacking attempt
-						houseOwner.sendSystemMessage("Structure can't be redeeded. Maximum lot count exceeded.",(byte)1);
-						return;
+					
+					if (canRedeed==1){					
+						TangibleObject deed = (TangibleObject) core.objectService.createObject(houseTemplate.getDeedTemplate(), owner.getPlanet());
+						
+						if (player.getLotsRemaining() + houseTemplate.getLotCost() > 10){
+							// Something went wrong or hacking attempt
+							houseOwner.sendSystemMessage("Structure can't be redeeded. Maximum lot count exceeded.",(byte)1);
+							return;
+						}
+						
+						deed.setIntAttribute("@obj_attr_n:examine_maintenance_rate", houseTemplate.getBaseMaintenanceRate());
+						deed.setIntAttribute("@obj_attr_n:examine_maintenance", (int) building.getMaintenanceAmount());
+						
+						owner.getContainer().remove(owner);
+						
+						int costs = 800;
+						houseOwner.setBankCredits(houseOwner.getBankCredits()-costs);
+						
+						destroyStructure(building);
+											
+	 
+						SWGObject ownerInventory = owner.getSlottedObject("inventory");
+						ownerInventory.add(deed);
+						
+						if (player.getLotsRemaining() + houseTemplate.getLotCost() <= 10) {
+							player.setLotsRemaining(player.getLotsRemaining() + houseTemplate.getLotCost());
+						}
+											
+						houseOwner.sendSystemMessage("@player_structure:processing_destruction",(byte)1);
+						houseOwner.sendSystemMessage("@player_structure:deed_reclaimed",(byte)1);
+						
+					} else {
+						
+						if (player.getLotsRemaining() + houseTemplate.getLotCost() > 10){
+							// Something went wrong or hacking attempt
+							houseOwner.sendSystemMessage("Structure can't be destroyed. Maximum lot count exceeded.",(byte)1);
+							return;
+						}						
+						owner.getContainer().remove(owner);					
+						destroyStructure(building); 						
+						if (player.getLotsRemaining() + houseTemplate.getLotCost() <= 10) {
+							player.setLotsRemaining(player.getLotsRemaining() + houseTemplate.getLotCost());
+						}
+											
+						houseOwner.sendSystemMessage("@player_structure:processing_destruction",(byte)1);
 					}
-					
-					deed.setIntAttribute("@obj_attr_n:examine_maintenance_rate", houseTemplate.getBaseMaintenanceRate());
-					deed.setIntAttribute("@obj_attr_n:examine_maintenance", (int) building.getMaintenanceAmount());
-					
-					owner.getContainer().remove(owner);
-					
-					int costs = 800;
-					houseOwner.setBankCredits(houseOwner.getBankCredits()-costs);
-					
-					destroyStructure(building);
-										
- 
-					SWGObject ownerInventory = owner.getSlottedObject("inventory");
-					ownerInventory.add(deed);
-					
-					if (player.getLotsRemaining() + houseTemplate.getLotCost() <= 10) {
-						player.setLotsRemaining(player.getLotsRemaining() + houseTemplate.getLotCost());
-					}
-										
-					houseOwner.sendSystemMessage("@player_structure:processing_destruction",(byte)1);
-					houseOwner.sendSystemMessage("@player_structure:deed_reclaimed",(byte)1);
-					
 					
 				} else {
 					houseOwner.sendSystemMessage("@player_structure:incorrect_destroy_code",(byte)1);
@@ -634,6 +673,7 @@ public class HousingService implements INetworkDispatch {
 		}
 	}
 	
+	@SuppressWarnings("unused")
 	public void handleListAllItems(SWGObject owner, TangibleObject target) {
 		final BuildingObject building = (BuildingObject) target.getGrandparent();
 		//final BuildingObject building = (BuildingObject) target.getAttachment("housing_parentstruct");
@@ -854,9 +894,13 @@ public class HousingService implements INetworkDispatch {
 			window.addListBoxMenuItem("#"+(i+1)+": " + foundItems.get(i).getTemplate(), i);
 			itemIDMapping.put(i, itemList.get(i).getObjectID());
 			if (i==0){
-				((CreatureObject)owner).setLookAtTarget(itemList.get(i).getObjectID());
-				((CreatureObject)owner).setTargetId(itemList.get(i).getObjectID());
-				((CreatureObject)owner).setIntendedTarget(itemList.get(i).getObjectID());
+				// possibly sending the same delta multiple times
+				if (((CreatureObject) owner).getLookAtTarget() != itemList.get(i).getObjectID());
+					((CreatureObject)owner).setLookAtTarget(itemList.get(i).getObjectID());
+				if (((CreatureObject) owner).getTargetId() != itemList.get(i).getObjectID());
+					((CreatureObject)owner).setTargetId(itemList.get(i).getObjectID());
+				if (((CreatureObject) owner).getIntendedTarget() != itemList.get(i).getObjectID());
+					((CreatureObject)owner).setIntendedTarget(itemList.get(i).getObjectID());
 			}
 		}		
 
