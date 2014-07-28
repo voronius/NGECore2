@@ -22,7 +22,7 @@ def startConversation(core, actor, npc):
 	convSvc = core.conversationService
 	faction = actor.getFaction()
 	factionStatus = actor.getFactionStatus()
-	
+
 	if actor.getPvpStatus(PvpStatus.GoingOvert) or actor.getPvpStatus(PvpStatus.GoingCovert):
 		core.conversationService.sendStopConversation(actor, npc, 'conversation/faction_recruiter_rebel', 's_364')
 		return	
@@ -188,7 +188,7 @@ def handleSecondScreen(core, actor, npc, selection):
 			convSvc.sendConversationMessage(actor, npc, OutOfBand.ProsePackage('@conversation/faction_recruiter_rebel:s_76'))
 			
 			options = Vector()
-			options.add(ConversationOption(outOfBand.ProsePackage('@conversation/faction_recruiter_rebel:s_78'), 0))
+			options.add(ConversationOption(OutOfBand.ProsePackage('@conversation/faction_recruiter_rebel:s_78'), 0))
 			options.add(ConversationOption(OutOfBand.ProsePackage('@conversation/faction_recruiter_rebel:s_75'), 1))
 			convSvc.sendConversationOptions(actor, npc, options, handleThirdScreen)
 			
@@ -262,9 +262,13 @@ def handleSecondScreen(core, actor, npc, selection):
 		return
 
 def handleThirdScreen(core, actor, npc, selection):
+	playerObject = actor.getSlottedObject('ghost')
 	if selection == 0:
-		core.conversationService.sendStopConversation(actor, npc, 'conversation/faction_recruiter_rebel', 's_58')	
+		core.conversationService.sendStopConversation(actor, npc, 'conversation/faction_recruiter_rebel', 's_58')
 		core.factionService.resign(actor)
+		playerObject.setCurrentRank(0)
+		newrank = playerObject.getCurrentRank()
+		core.scriptService.callScript("scripts/collections/", "gcwrank_" + 'rebel', "handleRankDown", actor, newrank)
 		return
 	if selection == 1:
 		core.conversationService.sendStopConversation(actor, npc, 'conversation/faction_recruiter_rebel', 's_80')
