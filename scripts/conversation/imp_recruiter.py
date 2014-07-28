@@ -266,8 +266,12 @@ def handleSecondScreen(core, actor, npc, selection):
 		
 def handleThirdScreen(core, actor, npc, selection):
 	if selection == 0:
+		playerObject = actor.getSlottedObject('ghost')
 		core.conversationService.sendStopConversation(actor, npc, 'conversation/faction_recruiter_imperial', 's_94')	
 		core.factionService.resign(actor)
+		playerObject.setCurrentRank(0)
+		newrank = playerObject.getCurrentRank()
+		core.scriptService.callScript("scripts/collections/", "gcwrank_" + 'imperial', "handleRankDown", actor, newrank)
 		return
 	
 	if selection == 1:

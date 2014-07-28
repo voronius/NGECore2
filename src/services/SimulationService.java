@@ -22,6 +22,9 @@
 package services;
 
 import java.nio.ByteOrder;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -1031,9 +1034,24 @@ public class SimulationService implements INetworkDispatch {
 			if (!zoneRoom.getUserList().contains(chatName)) {
 				core.chatService.joinChatRoom(chatName, zoneRoom.getRoomId(), true);
 			}
+	
+		//System.out.println(object.getFirstName());
+		try {
+			List<String> admins = Files.readAllLines(Paths.get("admins.txt"), Charset.forName("UTF-8"));
+			for (String admin : admins) {
+				int godLevel = Integer.valueOf(admin.split(",")[0]);
+				String name = admin.split(",")[1];
+				if (object.getCustomName().equals(name)) { 
+					((PlayerObject) object.getSlottedObject("ghost")).setGodLevel(godLevel);;
+					System.out.println(object.getFirstName());
+					object.addAbility("admin");
+					object.addSkill("swg_dev");}
+			 }} catch (Exception e) {
+				 e.printStackTrace();
+			 }
 		}
-		
 	}
+		
 		
 	public void transferToPlanet(SWGObject object, Planet planet, Point3D newPos, Quaternion newOrientation, SWGObject newParent) {
 		

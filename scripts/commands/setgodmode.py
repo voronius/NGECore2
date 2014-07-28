@@ -36,37 +36,14 @@ def run(core, actor, target, commandString):
 	if not command:
 		return
 	
-	if actor.getClient().isGM() is False:
-		return
-	
-	if playerObject.getGodLevel() == 0:
-		actor.addAbility("admin")
-		playerObject.setGodLevel(50)
-	
 	if command == 'giveExperience' and arg1:
 		core.playerService.giveExperience(actor, int(arg1))
 		
 	if command == 'level' and arg1:
 		core.playerService.grantLevel(actor, int(arg1))
+		
 	
-	elif command == 'setSpeed' and arg1:
-		#actor.sendSystemMessage("Your speed was " + str(actor.getSpeedMultiplierBase()) + ". Don\'t forget to set this back or it\'ll permanently imbalance your speed. Default without buffs or mods is 1.", 2)
-		actor.setSpeedMultiplierBase(float(arg1))
-		actor.sendSystemMessage('Your new speed is ' + arg1 + '.', 2)
-	
-	elif command == 'teleport' and arg2 and arg3 and arg4:
-		position = Point3D(float(arg2), float(arg3), float(arg4))
-		core.simulationService.transferToPlanet(actor, core.terrainService.getPlanetByName(arg1), position, actor.getOrientation(), None)
-	
-	elif command == 'teleportplayer' and arg1 and arg2 and arg3 and arg4 and arg5:
-		player = core.chatService.getObjectByFirstName(arg1)
-		if player:
-			position = Point3D(float(arg3), float(arg4), float(arg5))
-			core.simulationService.transferToPlanet(player, core.terrainService.getPlanetByName(arg2), position, player.getOrientation(), None)
 			
-	elif command == 'credits' and arg1:
-		actor.setCashCredits(actor.getCashCredits() + int(arg1))
-		actor.sendSystemMessage('The Galactic Empire has transferred ' + arg1 + ' credits to you for your service.', 0)
 		
 	elif command == 'addability' and arg1:
 		actor.addAbility(str(arg1))
@@ -101,14 +78,6 @@ def run(core, actor, target, commandString):
 		
 	elif command == 'buff' and arg1:
 		core.buffService.addBuffToCreature(actor, str(arg1), actor)
-	
-	elif command == 'stealth':
-		if (actor.isInStealth()):
-			actor.setInStealth(False)
-			actor.setRadarVisible(True)
-		else:
-			actor.setInStealth(True)
-			actor.setRadarVisible(False)
 	
 	elif command == 'holoEmote' and arg1:
 		playerObject.setHoloEmote('holoemote_' + arg1)
@@ -192,11 +161,6 @@ def run(core, actor, target, commandString):
 		actor.sendSystemMessage('Sent UnknownAbilityPacket for ability ' + arg1, 0)
 		return
 		
-	elif command == 'rank' and arg1:
-		playerObject.setCurrentRank(int(arg1))
-		print (playerObject.getCurrentRank())
-		return
-	
 	elif command == 'addToFrogAdminList':
 		frogBuilding = core.objectService.getObject(core.devService.getFrogBuildingId())
 		

@@ -35,7 +35,7 @@ def screenOne (core, owner):
 	window.addListBoxMenuItem('Items', 1)
 	window.addListBoxMenuItem('Instant Travel Locations', 2)
 	window.addListBoxMenuItem('Resources', 3)
-	if owner.getClient() and owner.getClient().isGM() == True:
+	if owner.getSlottedObject('ghost').getGodLevel() > 0:
 		window.addListBoxMenuItem('Admin', 4)
 	core.suiService.openSUIWindow(window);
 		
