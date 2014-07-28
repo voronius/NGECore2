@@ -9,3 +9,5 @@
 15,GM-Undercova
 15,GM-Wefi
 15,GM-Zing
+15,GM-Charon
+15,GM-Tacef
