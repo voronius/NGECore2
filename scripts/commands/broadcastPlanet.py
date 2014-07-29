@@ -7,5 +7,6 @@ def setup():
     return
     
 def run(core, actor, target, commandString):
+	core.chatService.broadcastPlanet(commandString, actor.getPlanet())
 	return
 

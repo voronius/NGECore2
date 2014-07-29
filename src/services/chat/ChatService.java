@@ -799,6 +799,11 @@ public class ChatService implements INetworkDispatch {
 		core.simulationService.notifyAllClients(new ChatSystemMessage(message, new OutOfBand(), DisplayType.Broadcast).serialize());
 	}
 	
+	public void broadcastPlanet(String message, Planet planet) {
+		core.simulationService.notifyPlanet(planet, new ChatSystemMessage(message, new OutOfBand(), DisplayType.Broadcast).serialize());
+
+	}
+	
 	public void loadChatRooms() {
 		
 		/*
