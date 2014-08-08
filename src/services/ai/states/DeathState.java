@@ -21,18 +21,25 @@
  ******************************************************************************/
 package services.ai.states;
 
+import org.python.core.Py;
+import org.python.core.PyObject;
+
 import engine.resources.container.CreatureContainerPermissions;
 import main.NGECore;
+import resources.common.FileUtilities;
 import resources.objects.creature.CreatureObject;
 import resources.objects.tangible.TangibleObject;
 import services.ai.AIActor;
+
 
 public class DeathState extends AIState {
 
 	@Override
 	public byte onEnter(AIActor actor) {
-		NGECore.getInstance().aiService.awardExperience(actor);
-		NGECore.getInstance().aiService.awardGcw(actor);
+		
+		NGECore core=NGECore.getInstance();
+		core.aiService.awardExperience(actor);
+		core.aiService.awardGcw(actor);
 		actor.getCreature().setAttachment("radial_filename", "npc/corpse");
 		//NGECore.getInstance().scriptService.callScript("scripts/radial/npc/corpse", "", "createRadial", NGECore.getInstance(), actor.getCreature().getKiller(), actor.getCreature(), new Vector<RadialOptions>());		
 		actor.scheduleDespawn();
@@ -41,7 +48,35 @@ public class DeathState extends AIState {
 			killer = actor.getHighestDamageDealer();
 		actor.getCreature().setContainerPermissions(CreatureContainerPermissions.CREATURE_CONTAINER_PERMISSIONS);
 		NGECore.getInstance().lootService.DropLoot(killer,(TangibleObject)(actor.getCreature()));
-		
+		if(actor.getMobileTemplate().getAIFile()!=null)
+			{
+
+				
+	        	 if (FileUtilities.doesFileExist("scripts/ai/" + actor.getMobileTemplate().getAIFile() +  ".py"))
+	        	 {
+	        		 PyObject method = core.scriptService.getMethod("scripts/ai/", actor.getMobileTemplate().getAIFile(), "onKill");
+				
+	        		 if (method != null && method.isCallable()) 
+	        		 {
+	        			 method.__call__(Py.java2py(core), Py.java2py(actor), Py.java2py(killer));
+	        		 }
+	        	 }
+				/* if (!evt.isDone()) do some core processing */ 
+		        
+			}
+			else if(FileUtilities.doesFileExist("scripts/ai/genericCombatAI.py"))
+			{
+
+					 PyObject method = core.scriptService.getMethod("scripts/ai/", "genericCombatAI", "onKill");
+				
+	        		 if (method != null && method.isCallable()) 
+	        		 {
+	        			 method.__call__(Py.java2py(core), Py.java2py(actor), Py.java2py(killer));
+	        		 }
+	        	 
+	 				/* if (!evt.isDone()) do some core processing */ 
+			}
+		actor.setScheduledDeath();
 		actor.destroyActor(); // to prevent standing up right after death
 		
 		return 0;

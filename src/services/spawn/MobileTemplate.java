@@ -25,12 +25,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
+
 import resources.datatables.Options;
 import resources.datatables.PvpStatus;
 import resources.datatables.FactionStatus;
 import resources.loot.LootGroup;
 
-public class MobileTemplate implements Cloneable {
+
+
+public class MobileTemplate extends AITemplate implements Cloneable {
+
+	
+	
+	
 	
 	private Vector<String> templates;
 	private int optionsBitmask = Options.ATTACKABLE;
@@ -40,6 +47,7 @@ public class MobileTemplate implements Cloneable {
 	private short level;
 	private short minLevel;
 	private short maxLevel;
+
 	private Vector<String> attacks;
 	private String defaultAttack;
 	private int difficulty = 0;
@@ -49,7 +57,7 @@ public class MobileTemplate implements Cloneable {
 	private String customName;
 	private float scale = 1;
 	private Vector<String> weaponTemplates = new Vector<String>();
-	private Vector<WeaponTemplate> weaponTemplateVector = new Vector<WeaponTemplate>();
+	private Vector<WeaponTemplate> defaultWeaponTemplateVector = new Vector<WeaponTemplate>();
 	private int minSpawnDistance = 0;
 	private int maxSpawnDistance = 0;
 	private boolean deathblow = false;
@@ -120,6 +128,7 @@ public class MobileTemplate implements Cloneable {
 		this.attacks = attacks;
 	}
 
+
 	public int getDifficulty() {
 		return difficulty;
 	}
@@ -176,14 +185,19 @@ public class MobileTemplate implements Cloneable {
 		this.weaponTemplates = weaponTemplates;
 	}
 
-	public Vector<WeaponTemplate> getWeaponTemplateVector() {
-		return weaponTemplateVector;
+	public Vector<WeaponTemplate> getWeaponTemplateVector() 
+	{
+		return defaultWeaponTemplateVector;
 	}
 
-	public void setWeaponTemplateVector(Vector<WeaponTemplate> weaponTemplateVector) {
-		this.weaponTemplateVector = weaponTemplateVector;
-	}
+	public void setWeaponTemplateVector(Vector<WeaponTemplate> weaponTemplateVector) 
+	{
+		this.defaultWeaponTemplateVector = weaponTemplateVector;
+	}	
+	
+	
 
+	
 	public int getMinSpawnDistance() {
 		return minSpawnDistance;
 	}

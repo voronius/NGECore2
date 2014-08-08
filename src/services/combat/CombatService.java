@@ -110,7 +110,8 @@ public class CombatService implements INetworkDispatch {
 		if(success && !applySpecialCost(attacker, weapon, command))
 			success = false;
 		
-		if(!success) {
+		if(!success && attacker.getClient()!=null ) {
+			
 			IoSession session = attacker.getClient().getSession();
 			CommandEnqueueRemove commandRemove = new CommandEnqueueRemove(attacker.getObjectId(), actionCounter);
 			session.write(new ObjControllerMessage(0x0B, commandRemove).serialize());
@@ -336,7 +337,7 @@ public class CombatService implements INetworkDispatch {
 		event.attacker = attacker;
 		event.damage = damage;
 		target.getEventBus().publish(event);
-		System.out.println("APPLY DAMAGE2");
+
 		attacker.setTefTime(300000);
 	}
 
@@ -1015,9 +1016,15 @@ public class CombatService implements INetworkDispatch {
 		}
 		
 		if(command.getAttackType() == 1)
+		{
 			doSingleTargetHeal(healer, target, weapon, command, actionCounter);
+		}
 		else if(command.getAttackType() == 0 || command.getAttackType() == 2 || command.getAttackType() == 3)
+		{
 			doAreaHeal(healer, target, weapon, command, actionCounter);
+		}
+		
+
 		
 		sendHealPackets(healer, target, weapon, command, actionCounter);
 		
@@ -1058,7 +1065,13 @@ public class CombatService implements INetworkDispatch {
 		
 		if(FileUtilities.doesFileExist("scripts/commands/combat" + command.getCommandName() + ".py"))
 			core.scriptService.callScript("scripts/commands/combat", command.getCommandName(), "run", core, healer, target, null);
-		
+	
+		//this should add aggro for medics
+		for(CreatureObject cre: ((AIActor)target.getAttachment("AI")).getAggroMap().keySet() )
+		{
+			
+			((AIActor)target.getAttachment("AI")).addAggro(cre,healAmount);
+		}
 	}
 	
 	private void doAreaHeal(CreatureObject healer, CreatureObject target, WeaponObject weapon, CombatCommand command, int actionCounter) {

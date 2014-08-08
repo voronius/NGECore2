@@ -139,42 +139,139 @@ public class SpawnService {
 			creature.setLevel(level);
 		}
 		
+		
+
+		AIActor actor = new AIActor(creature, creature.getPosition(), scheduler);
+
+		creature.setAttachment("AI", actor);
+		actor.setMobileTemplate(mobileTemplate);
+		
 		WeaponObject defaultWeapon = null;
+		WeaponObject meleeWeapon = null;
+		WeaponObject rangedWeapon = null;
 		Vector<WeaponTemplate> weaponTemplates = mobileTemplate.getWeaponTemplateVector();
+		Vector<WeaponTemplate> meleeTemplates = mobileTemplate.getMeleeWeaponTemplateVector();
+		Vector<WeaponTemplate> rangedTemplates = mobileTemplate.getRangedWeaponTemplateVector();
 		int rnd = 0;
 
-		if (weaponTemplates.size() > 0 )
-			rnd = new Random().nextInt(weaponTemplates.size());
-		
-		if (weaponTemplates.size() == 0){
-			defaultWeapon =  (WeaponObject) core.objectService.createObject("object/weapon/creature/shared_creature_default_weapon.iff", creature.getPlanet());
-			defaultWeapon.setAttackSpeed(1.0F);
-			defaultWeapon.setWeaponType(WeaponType.UNARMED);
-			defaultWeapon.setDamageType("kinetic");
+		if	(rangedTemplates!=null && rangedTemplates.size()>0)
+		{
+			rnd = new Random().nextInt(rangedTemplates.size());
+			rangedWeapon = (WeaponObject) core.objectService.createObject(rangedTemplates.get(rnd).getTemplate(), creature.getPlanet());
+			rangedWeapon.setAttackSpeed(rangedTemplates.get(rnd).getAttackSpeed());
+			rangedWeapon.setWeaponType(rangedTemplates.get(rnd).getWeaponType());
+			rangedWeapon.setMaxRange(rangedTemplates.get(rnd).getMaxRange());
+			rangedWeapon.setDamageType(rangedTemplates.get(rnd).getDamageType());
+			if (rangedTemplates.get(rnd).getMinDamage() != 0 && rangedTemplates.get(rnd).getMaxDamage() != 0) 
+			{
+				rangedWeapon.setMaxDamage(rangedTemplates.get(rnd).getMinDamage());
+				rangedWeapon.setMinDamage(rangedTemplates.get(rnd).getMaxDamage());
+			}
 
-			defaultWeapon.setMaxRange(5);
-		} else {
-			defaultWeapon = (WeaponObject) core.objectService.createObject(weaponTemplates.get(rnd).getTemplate(), creature.getPlanet());
-			defaultWeapon.setAttackSpeed(weaponTemplates.get(rnd).getAttackSpeed());
-			defaultWeapon.setWeaponType(weaponTemplates.get(rnd).getWeaponType());
-			defaultWeapon.setMaxRange(weaponTemplates.get(rnd).getMaxRange());
-			defaultWeapon.setDamageType(weaponTemplates.get(rnd).getDamageType());
+		}
+		if	(meleeTemplates!=null && meleeTemplates.size()>0)
+		{
+			rnd = new Random().nextInt(meleeTemplates.size());
+			meleeWeapon = (WeaponObject) core.objectService.createObject(meleeTemplates.get(rnd).getTemplate(), creature.getPlanet());
+			meleeWeapon.setAttackSpeed(meleeTemplates.get(rnd).getAttackSpeed());
+			meleeWeapon.setWeaponType(meleeTemplates.get(rnd).getWeaponType());
+			meleeWeapon.setMaxRange(meleeTemplates.get(rnd).getMaxRange());
+			meleeWeapon.setDamageType(meleeTemplates.get(rnd).getDamageType());
+			if (meleeTemplates.get(rnd).getMinDamage() != 0 && meleeTemplates.get(rnd).getMaxDamage() != 0) 
+			{
+				meleeWeapon.setMaxDamage(meleeTemplates.get(rnd).getMinDamage());
+				meleeWeapon.setMinDamage(meleeTemplates.get(rnd).getMaxDamage());
+			}
+
+		}
+		if(meleeWeapon!=null)
+		{
+			try
+			{
+			actor.setMeleeWeapon(meleeWeapon);
+			} catch(Exception ex) {ex.printStackTrace();}
+			if(mobileTemplate.hasMeleeAI())
+			{
+				defaultWeapon=meleeWeapon;
+				actor.setRanged(false);
+			}
+
+		}
+		if(rangedWeapon!=null)
+		{
+			try
+			{actor.setRangedWeapon(rangedWeapon);
+			
+			} catch(Exception ex) {ex.printStackTrace();}
+			
+			if(!mobileTemplate.hasMeleeAI())
+			{
+				defaultWeapon=rangedWeapon;
+				actor.setRanged(true);
+			}
+
 		}
 		
-		if (weaponTemplates.get(rnd).getMinDamage() != 0 && weaponTemplates.get(rnd).getMaxDamage() != 0) {
-			defaultWeapon.setMaxDamage(weaponTemplates.get(rnd).getMinDamage());
-			defaultWeapon.setMinDamage(weaponTemplates.get(rnd).getMaxDamage());
-		} else {
-			defaultWeapon.setMaxDamage(creature.getLevel() * 24);
-			defaultWeapon.setMinDamage(creature.getLevel() * 22);
-		}
+		if(meleeWeapon==null && rangedWeapon==null)
+		{
+			
+			if (weaponTemplates!=null && weaponTemplates.size() == 0)
+			{
+				defaultWeapon = (WeaponObject) core.objectService.createObject("object/weapon/creature/shared_creature_default_weapon.iff", creature.getPlanet());
+				defaultWeapon.setAttackSpeed(1.0F);
+				defaultWeapon.setWeaponType(WeaponType.UNARMED);
+				defaultWeapon.setDamageType("kinetic");
+				defaultWeapon.setMaxRange(5);
+				try
+				{
+				actor.setMeleeWeapon(defaultWeapon);
+				actor.setRanged(false);
+				} catch(Exception ex) {ex.printStackTrace();}
+			} else 
+			{
+				defaultWeapon = (WeaponObject) core.objectService.createObject(weaponTemplates.get(rnd).getTemplate(), creature.getPlanet());
+				defaultWeapon.setAttackSpeed(weaponTemplates.get(rnd).getAttackSpeed());
+				defaultWeapon.setWeaponType(weaponTemplates.get(rnd).getWeaponType());
+				defaultWeapon.setMaxRange(weaponTemplates.get(rnd).getMaxRange());
+				defaultWeapon.setDamageType(weaponTemplates.get(rnd).getDamageType());
+				
+				if (weaponTemplates.get(rnd).getMinDamage() != 0 && weaponTemplates.get(rnd).getMaxDamage() != 0) 
+				{
+					defaultWeapon.setMaxDamage(weaponTemplates.get(rnd).getMinDamage());
+					defaultWeapon.setMinDamage(weaponTemplates.get(rnd).getMaxDamage());
+				} else 
+				{
+					defaultWeapon.setMaxDamage(creature.getLevel() * 24);
+					defaultWeapon.setMinDamage(creature.getLevel() * 22);
+				}
+				
+				
+				try
+				{
+				if(defaultWeapon.isMelee())
+				{
+					actor.setMeleeWeapon(defaultWeapon);
+					actor.setRanged(false);
+				}
+				else if(defaultWeapon.isRanged())
+				{
+					actor.setRangedWeapon(defaultWeapon);
+					actor.setRanged(true);
+				}
+				} catch(Exception ex) {ex.printStackTrace();}
+
+			}
+
+		} 
 		
-		creature.addObjectToEquipList(defaultWeapon);
 		creature.add(defaultWeapon);
+		creature.addObjectToEquipList(defaultWeapon);
 		creature.setWeaponId(defaultWeapon.getObjectID());
 		creature.addObjectToEquipList(inventory);
 		creature.add(inventory);
+		
 
+		
 		int customHealth = mobileTemplate.getHealth();
 		if(difficulty > 0 && customHealth == 0) {
 			if(difficulty == 1) {
@@ -207,14 +304,13 @@ public class SpawnService {
 			core.skillModService.addSkillMod(creature, "expertise_innate_protection_all", armor);
 		}
 
-		AIActor actor = new AIActor(creature, creature.getPosition(), scheduler);
-		creature.setAttachment("AI", actor);
-		if (mobileTemplate.getConversationFileName().length()>0){
+		if (mobileTemplate.getConversationFileName().length()>0)
+		{
 			creature.setAttachment("radial_filename", "object/conversation");
 			creature.setAttachment("conversationFile", mobileTemplate.getConversationFileName());
-			}
+		}
 		else  creature.setAttachment("radial_filename", "npc/mobile");
-		actor.setMobileTemplate(mobileTemplate);
+
 		
 	
 		

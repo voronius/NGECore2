@@ -22,6 +22,7 @@
 package services.ai;
 
 import java.util.Map;
+import java.util.HashMap;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,6 +39,7 @@ import resources.datatables.Options;
 import resources.objects.cell.CellObject;
 import resources.objects.creature.CreatureObject;
 import resources.objects.tangible.TangibleObject;
+import resources.objects.weapon.WeaponObject;
 import services.ai.states.AIState;
 import services.ai.states.AIState.StateResult;
 import services.ai.states.AttackState;
@@ -52,9 +54,17 @@ import services.spawn.MobileTemplate;
 import tools.DevLog;
 import resources.datatables.FactionStatus;
 
+
+
+
+
+
+
+
 import java.util.Random;
 
 public class AIActor {
+
 	
 	private CreatureObject creature;
 	private Point3D spawnPosition;
@@ -64,6 +74,7 @@ public class AIActor {
 	private MobileTemplate mobileTemplate;
 	private ScheduledExecutorService scheduler;
 	private Map<CreatureObject, Integer> damageMap = new ConcurrentHashMap<CreatureObject, Integer>();
+	private Map<CreatureObject, Integer> aggroMap = new ConcurrentHashMap<CreatureObject, Integer>();
 	private volatile boolean hasReachedPosition;
 	private long lastAttackTimestamp;
 	private ScheduledFuture<?> regenTask;
@@ -87,6 +98,16 @@ public class AIActor {
 	private ScheduledFuture<?> recoveryFuture;
 	private ScheduledFuture<?> despawnFuture;
 
+	private WeaponObject meleeWeapon = null;
+	private WeaponObject rangedWeapon = null;
+	
+	private volatile boolean scheduledDeath=false;
+	private boolean ranged=false;
+	
+	private Map<String,Integer> uniqueSkills=new HashMap<String,Integer>();
+	private Map<String,Integer> scriptVars=new HashMap<String,Integer>();
+	
+	
 	public AIActor(CreatureObject creature, Point3D spawnPosition, ScheduledExecutorService scheduler) {
 		this.creature = creature;
 		this.spawnPosition = spawnPosition;
@@ -250,7 +271,8 @@ public class AIActor {
 		}
 	}
 	
-	public void removeDefender(CreatureObject defender) {
+	public void removeDefender(CreatureObject defender) 
+	{
 		creature.removeDefender(defender);
 		damageMap.remove(defender);
 		defender.removeDefender(creature);
@@ -274,6 +296,14 @@ public class AIActor {
 		return highestDamageDealer;
 	}
 
+	public CreatureObject getHighestAggro() 
+	{
+		CreatureObject highestAggro = null;
+		highestAggro = aggroMap.keySet().stream().max((c1, c2) -> aggroMap.get(c1) - aggroMap.get(c2)).orElse(null);
+		return highestAggro;
+	}
+
+	
 	public AIState getCurrentState() {
 		return currentState;
 	}
@@ -347,15 +377,71 @@ public class AIActor {
 	public void handleDamage(DamageTaken event) {
 		CreatureObject attacker = event.attacker;
 		if(damageMap.containsKey(attacker))
+		{
 			damageMap.put(attacker, damageMap.get(attacker) + event.damage);
-		else 
+		}
+		else
+		{
 			damageMap.put(attacker, event.damage);
+		}
+		if(aggroMap.containsKey(attacker))
+		{
+			aggroMap.put(attacker, aggroMap.get(attacker) + event.damage);
+		}
+		else
+		{
+			aggroMap.put(attacker, event.damage);
+		}
+		
 	}
+
+	
+	public void subtractAggro(CreatureObject attacker,Integer amount)
+	{
+		addAggro(attacker,-amount);
+	}
+	
+	
+	public void addAggro(CreatureObject attacker,Integer amount)
+	{
+		if(aggroMap.containsKey(attacker))
+		{
+			aggroMap.put(attacker, aggroMap.get(attacker) + amount);
+		}
+		else
+		{
+			aggroMap.put(attacker, amount);
+		}
+	}
+	
+	public Integer getAggro(CreatureObject attacker)
+	{
+		if(aggroMap.containsKey(attacker))
+		{
+			return aggroMap.get(attacker);
+		}
+		return 0;
+	}
+	
+	
+	public void removeFromAggro(CreatureObject attacker)
+	{
+		if(aggroMap.containsKey(attacker))
+		{
+			aggroMap.remove(attacker);
+		}
+	}
+	
+	
 	
 	public Map<CreatureObject, Integer> getDamageMap() {
 		return damageMap;
 	}
-
+	public Map<CreatureObject, Integer> getAggroMap() 
+	{
+		return aggroMap;
+	}
+	
 	public boolean hasReachedPosition() {
 		return hasReachedPosition;
 	}
@@ -400,10 +486,23 @@ public class AIActor {
 		return System.currentTimeMillis() - getLastAttackTimestamp();
 	}
 	
+	public void setScheduledDeath()
+	{
+		this.scheduledDeath=true;
+	}
 	public void doStateAction(byte result) {
 		
-		if (creature==null){
-			destroyActor();
+	
+		if (creature==null)
+		{
+			//?!! you can't call this if creature is null already
+			//destroyActor();
+			return;
+		}
+		//a deathState has already been created here, see below
+		//there can be only one
+		if(getCurrentState() instanceof DeathState || scheduledDeath)
+		{
 			return;
 		}
 		
@@ -461,6 +560,7 @@ public class AIActor {
 					followObject = null;
 					creature.setAttachment("AI", null);
 					NGECore.getInstance().objectService.destroyObject(creature);
+					creature=null;
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
@@ -468,8 +568,12 @@ public class AIActor {
 		}, 2, TimeUnit.MINUTES);
 	}
 	
-	public void destroyActor(){
-		creature.getEventBus().unsubscribe(this);
+	public void destroyActor()
+	{
+		if(creature!=null)
+		{
+			creature.getEventBus().unsubscribe(this);
+		}
 		// Make sure to kill all AI helper threads
 		if (aggroCheckTask!=null)
 			aggroCheckTask.cancel(true);
@@ -488,7 +592,8 @@ public class AIActor {
 		if (despawnFuture!=null){
 			despawnFuture.cancel(true);			
 			despawnFuture = null;
-		}		
+		}	
+		
 	}
 	
 	public void cancelAggro(){
@@ -628,4 +733,134 @@ public class AIActor {
 		this.lastPositionBeforeStateChange = lastPositionBeforeStateChange;
 	}
 	
+	
+	public Map<String,Integer> getUniqueSkills() 
+	{
+		return uniqueSkills;
+	}
+	
+	public void setUniqueSkill(String k, Integer flags) 
+	{
+		uniqueSkills.put(k, flags);
+	}
+	
+	public void removeUniqueSkill(String k) 
+	{
+		uniqueSkills.remove(k);
+	}
+	
+	
+	public void clearUniqueSkills() 
+	{
+		uniqueSkills.clear();
+	}
+		
+	public Map<String,Integer> getScriptVars() 
+	{
+		return scriptVars;
+	}
+	
+	public void setScriptVar(String k, Integer flags) 
+	{
+		scriptVars.put(k, flags);
+	}
+	
+	public void removeScriptVar(String k) 
+	{
+		scriptVars.remove(k);
+	}
+	
+	
+	public void clearScriptVars() 
+	{
+		scriptVars.clear();
+	}
+	public void setMeleeWeapon(WeaponObject wpn) throws Exception
+	{
+		if(wpn.isRanged())
+		{
+			throw new Exception();
+		}
+		this.meleeWeapon=wpn;
+	}
+	
+	public void setRangedWeapon(WeaponObject wpn) throws Exception
+	{
+		if(wpn.isMelee())
+		{
+			throw new Exception();
+		}
+		this.rangedWeapon=wpn;
+	}
+
+	public WeaponObject getMeleeWeapon()
+	{
+		return this.meleeWeapon;
+	}
+	
+	public WeaponObject getRangedWeapon()
+	{
+		return this.rangedWeapon;
+	}
+
+	public void equipMeleeWeapon()
+	{
+		if(this.meleeWeapon !=null)
+		{
+			
+			if(creature.getWeaponId()!=0)
+			{
+				WeaponObject oldweapon=(WeaponObject)NGECore.getInstance().objectService.getObject(creature.getWeaponId());
+				//NGECore.getInstance().equipmentService.unequip(creature,oldweapon);
+
+				
+				creature.removeObjectFromEquipList(oldweapon);
+				creature.remove(oldweapon);
+				
+			}
+			ranged=false;
+			
+			
+			creature.add(this.meleeWeapon);
+			creature.addObjectToEquipList(this.meleeWeapon);
+			creature.setWeaponId(this.meleeWeapon.getObjectID());
+
+			//NGECore.getInstance().equipmentService.equip(creature,this.meleeWeapon);
+
+		}
+	}
+	
+	public void equipRangedWeapon()
+	{
+		if(this.rangedWeapon!=null )
+		{
+			if(creature.getWeaponId()!=0)
+			{
+				WeaponObject oldweapon=(WeaponObject)NGECore.getInstance().objectService.getObject(creature.getWeaponId());
+			
+				creature.removeObjectFromEquipList(oldweapon);
+				creature.remove(oldweapon);
+			
+			//	NGECore.getInstance().equipmentService.unequip(creature,oldweapon);
+
+			}
+			ranged=true;
+			
+			creature.add(this.rangedWeapon);
+			creature.addObjectToEquipList(this.rangedWeapon);
+			creature.setWeaponId(this.rangedWeapon.getObjectID());
+			
+			//NGECore.getInstance().equipmentService.equip(creature,this.rangedWeapon);
+
+		}
+	}
+
+	public boolean isRanged()
+	{
+		return this.ranged;
+	}
+	public void setRanged(boolean val)
+	{
+		this.ranged=val;
+	}
 }

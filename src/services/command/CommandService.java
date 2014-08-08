@@ -64,9 +64,11 @@ public class CommandService implements INetworkDispatch  {
 		this.core = core;
 	}
 	
-	public void registerAlias(String name, String target) {
+	public void registerAlias(String name, String target) 
+	{
 		aliases.put(CRC.StringtoCRC(name.toLowerCase()), CRC.StringtoCRC(target.toLowerCase()));
 	}
+	
 	
 	public boolean callCommand(CreatureObject actor, SWGObject target, BaseSWGCommand command, int actionCounter, String commandArgs) {
 
@@ -74,44 +76,63 @@ public class CommandService implements INetworkDispatch  {
 			return false;
 		}
 		
-		if (command == null) {
+		if (command == null) 
+		{
 			return false;
 		}
-		
+				
 		if (command.getCharacterAbility().length() > 0 && !actor.hasAbility(command.getCharacterAbility()) && actor.getClient() != null) {
 			return false;
 		}
 		
-		if (command.isDisabled()) {
+		if (command.isDisabled()) 
+		{
 			return false;
 		}
 		
-		if (actor.getClient() != null && command.getGodLevel() > actor.getPlayerObject().getGodLevel()) {
+		if (actor.getClient() != null && command.getGodLevel() > actor.getPlayerObject().getGodLevel()) 
+		{
 			return false;
 		}
 		
-		if (actor.hasCooldown(command.getCooldownGroup()) || actor.hasCooldown(command.getCommandName())) {
+
+		return callCreatureCommand(actor,target,command,actionCounter,commandArgs);
+	}	
+	public boolean callCreatureCommand(CreatureObject actor, SWGObject target, BaseSWGCommand command, int actionCounter, String commandArgs) 
+	{
+		
+		if (actor.hasCooldown(command.getCooldownGroup()) || actor.hasCooldown(command.getCommandName())) 
+		{
 			return false;
 		}
-		
 		TangibleObject weapon = (TangibleObject) core.objectService.getObject(actor.getWeaponId());
 		
-		if (weapon != null && weapon instanceof WeaponObject && ((WeaponObject) weapon).getWeaponType() == command.getInvalidWeapon()) {
+		if (weapon != null && weapon instanceof WeaponObject && ((WeaponObject) weapon).getWeaponType() == command.getInvalidWeapon()) 
+		{
+
 			return false;
 		}
 		
-		for (long state : command.getInvalidStates()) {
-			if ((actor.getStateBitmask() & state) == state) {
+		for (long state : command.getInvalidStates())
+		{
+			if ((actor.getStateBitmask() & state) == state) 
+			{
+
+				//?! why is this disabled ? ?
 				//return false;
 			}
 		}
 		
-		for (byte locomotion : command.getInvalidLocomotions()) {
-			if (actor.getLocomotion() == locomotion) {
+		for (byte locomotion : command.getInvalidLocomotions())
+		{
+			if (actor.getLocomotion() == locomotion) 
+			{
+				
+				
 				return false;
 			}
 		}
-		
+
 		switch (command.getTargetType()) {
 			case 0: // Target Not Used For This Command
 				break;
@@ -313,19 +334,30 @@ public class CommandService implements INetworkDispatch  {
 				e.printStackTrace();
 			}
 		}
-		
-		if(command instanceof CombatCommand) {
-			try {
+
+		if(command instanceof CombatCommand) 
+		{
+
+			try 
+			{
 				processCommand(actor, target, (BaseSWGCommand) command.clone(), actionCounter, commandArgs);
-			} catch (CloneNotSupportedException e) {
+			}
+			catch (CloneNotSupportedException e) 
+			{
 				e.printStackTrace();
 			}
 		}
 		else
+		{
+
 			processCommand(actor, target, command, actionCounter, commandArgs);
+		}
 			
 		
 		return true;
+	}
+	public void callCreatureCommand(SWGObject actor, String commandName, SWGObject target, String commandArgs) {
+		callCreatureCommand((CreatureObject) actor, target, getCommandByName(commandName), 0, commandArgs);	
 	}
 	
 	public void callCommand(SWGObject actor, String commandName, SWGObject target, String commandArgs) {
@@ -435,26 +467,39 @@ public class CommandService implements INetworkDispatch  {
 	}
 	
 	public void processCommand(CreatureObject actor, SWGObject target, BaseSWGCommand command, int actionCounter, String commandArgs) {
-		if (command.getCooldown() > 0f) {
+		if (command.getCooldown() > 0f) 
+		{
 			actor.addCooldown(command.getCooldownGroup(), command.getCooldown());
 		}
 		
-		if (command instanceof CombatCommand) {
+		if (command instanceof CombatCommand) 
+		{
+
 			processCombatCommand(actor, target, (CombatCommand) command, actionCounter, commandArgs);
-		} else {
-			if (FileUtilities.doesFileExist("scripts/commands/" + command.getCommandName().toLowerCase() + ".py")) {
+		} 
+		else 
+		{
+
+			if (FileUtilities.doesFileExist("scripts/commands/" + command.getCommandName().toLowerCase() + ".py")) 
+			{
+			
 				core.scriptService.callScript("scripts/commands/", command.getCommandName().toLowerCase(), "run", core, actor, target, commandArgs);
-			} else if (FileUtilities.doesFileExist("scripts/commands/combat/" + command.getCommandName().toLowerCase() + ".py")) {
+			} 
+			else if (FileUtilities.doesFileExist("scripts/commands/combat/" + command.getCommandName().toLowerCase() + ".py")) 
+			{
 				core.scriptService.callScript("scripts/commands/combat/", command.getCommandName().toLowerCase(), "run", core, actor, target, commandArgs);
 			}
+
 		}
 	}
 	
 	public void processCombatCommand(CreatureObject attacker, SWGObject target, CombatCommand command, int actionCounter, String commandArgs) {
-		if (FileUtilities.doesFileExist("scripts/commands/combat/" + command.getCommandName() + ".py")) {
+		if (FileUtilities.doesFileExist("scripts/commands/combat/" + command.getCommandName() + ".py")) 
+		{
 			core.scriptService.callScript("scripts/commands/combat/", command.getCommandName(), "setup", core, attacker, target, command);
+			
 		}
-		
+
 		boolean success = true;
 		
 		//if((command.getHitType() == 5 || command.getHitType() == 7) && !(target instanceof CreatureObject))
@@ -569,8 +614,9 @@ public class CommandService implements INetworkDispatch  {
 				data.order(ByteOrder.LITTLE_ENDIAN);
 				Client client = core.getClient(session);
 				
-				if (client == null) {
-					System.out.println("NULL Client");
+				if (client == null) 
+				{
+	
 					return;
 				}
 				
@@ -591,7 +637,7 @@ public class CommandService implements INetworkDispatch  {
 				}
 				
 				if (client.getParent() == null) {
-					System.out.println("NULL Object");
+
 					return;
 				}
 				
@@ -625,7 +671,7 @@ public class CommandService implements INetworkDispatch  {
 				Client client = core.getClient(session);
 
 				if(client == null) {
-					System.out.println("NULL Client");
+
 					return;
 				}
 
@@ -663,7 +709,7 @@ public class CommandService implements INetworkDispatch  {
 				Client client = core.getClient(session);
 
 				if(client == null) {
-					System.out.println("NULL Client");
+
 					return;
 				}
 
@@ -688,7 +734,7 @@ public class CommandService implements INetworkDispatch  {
 				data.order(ByteOrder.LITTLE_ENDIAN);
 				Client client = core.getClient(session);
 				if(client == null) {
-					System.out.println("NULL Client");
+
 					return;
 				}
 
